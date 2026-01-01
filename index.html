@@ -64,10 +64,16 @@
                             token: authCode
                         })
                     }).then(res => res.json()).then(data => {
-                        token = data.token;
-                        my.alert({
-                            content: "Login successful",
-                        });
+                        if (data && data.token) {
+                            token = data.token;
+                            my.alert({
+                                content: "Login successful",
+                            });
+                        } else {
+                            my.alert({
+                                content: "Login failed: invalid response",
+                            });
+                        }
                     }).catch(err => {
                         let errorDetails = '';
                         if (err && typeof err === 'object') {
@@ -76,12 +82,20 @@
                             errorDetails = String(err);
                         }
                         my.alert({
-                            content: "Error: " + errorDetails,
+                            content: "Login error: " + errorDetails,
                         });
                     });
                 },
                 fail: (res) => {
-                    console.log(res.authErrorScopes)
+                    let details = '';
+                    try {
+                        details = res && res.authErrorScopes ? JSON.stringify(res.authErrorScopes) : JSON.stringify(res);
+                    } catch (e) {
+                        details = String(res);
+                    }
+                    my.alert({
+                        content: "Authentication failed: " + details,
+                    });
                 },
             });
 
@@ -95,17 +109,32 @@
                     'Authorization': token
                 },
             }).then(res => res.json()).then(data => {
-                my.tradePay({
-                    paymentUrl: data.url,
-                    success: (res) => {
-                        my.alert({
-                            content: "Payment successful",
-                        });
-                    },
-                });
+                if (data && data.url) {
+                    my.tradePay({
+                        paymentUrl: data.url,
+                        success: (res) => {
+                            my.alert({
+                                content: "Payment successful",
+                            });
+                        },
+                        fail: (err) => {
+                            let details = '';
+                            try { details = err && err.errorMessage ? err.errorMessage : JSON.stringify(err); } catch (e) { details = String(err); }
+                            my.alert({ content: "Payment failed: " + details });
+                        }
+                    });
+                } else {
+                    my.alert({ content: "Payment failed: invalid response" });
+                }
             }).catch(err => {
+                let details = '';
+                if (err && typeof err === 'object') {
+                    try { details = JSON.stringify(err, null, 2); } catch (e) { details = String(err); }
+                } else {
+                    details = String(err);
+                }
                 my.alert({
-                    content: "Payment failed",
+                    content: "Payment failed: " + details,
                 });
             });
         }
